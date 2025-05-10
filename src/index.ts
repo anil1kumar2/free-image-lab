@@ -1,7 +1,7 @@
 export default {
   async fetch(request, env) {
     const inputs = {
-      prompt: "Grim portrait of a post-apocalyptic survivor, 50mm lens, gritty lighting, torn clothing, ash-covered skin, desaturated colors, scratched goggles, digital painting with cinematic grain, raw emotional expression.",
+      prompt: "Front-facing portrait of an Egyptian queen, 105mm lens, golden tones, painted eyeliner, royal headdress, studio lighting, digital oil painting, museum-style realism, soft background blur, sharp facial detail.",
     };
 
     const response = await env.AI.run(
