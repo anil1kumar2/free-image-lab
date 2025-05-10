@@ -1,18 +1,20 @@
 export default {
   async fetch(request, env) {
-    const inputs = {
-      prompt: "Front-facing portrait of an Egyptian queen, 105mm lens, golden tones, painted eyeliner, royal headdress, studio lighting, digital oil painting, museum-style realism, soft background blur, sharp facial detail.",
-    };
+    if (request.method !== 'POST') {
+      return new Response('Use POST with JSON {"prompt": "..."}', { status: 400 });
+    }
+    let { prompt } = await request.json();
+    if (!prompt || typeof prompt !== 'string') {
+      return new Response('Invalid prompt', { status: 400 });
+    }
 
     const response = await env.AI.run(
       "@cf/stabilityai/stable-diffusion-xl-base-1.0",
-      inputs,
+      { prompt, negative_prompt: "low quality, blurry, distorted" }
     );
 
     return new Response(response, {
-      headers: {
-        "content-type": "image/png",
-      },
+      headers: { "content-type": "image/png" }
     });
   },
-} satisfies ExportedHandler<Env>;
+};
