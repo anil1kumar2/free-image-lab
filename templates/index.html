@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Removal and Image Generation</title>
+</head>
+<body>
+    <h1>Image Generation & Background Removal</h1>
+
+    <!-- Image Generation Form -->
+    <h2>Generate Image</h2>
+    <form action="/generate" method="POST">
+        <label for="prompt">Prompt:</label>
+        <input type="text" id="prompt" name="prompt" required placeholder="Enter your image prompt">
+        <button type="submit">Generate Image</button>
+    </form>
+
+    {% if prompt %}
+    <p><strong>Prompt:</strong> {{ prompt }}</p>
+    {% endif %}
+
+    {% if output_image %}
+    <h2>Generated or Processed Image</h2>
+    <img src="{{ output_image }}" alt="Image" width="600">
+    <br>
+    <a href="{{ output_image }}" download="image.png">
+        <button>Download Image</button>
+    </a>
+    {% endif %}
+
+    <!-- Background Removal Form -->
+    <h2>Remove Background from Image</h2>
+    <form action="/process" method="POST" enctype="multipart/form-data">
+        <label for="image">Upload Image:</label>
+        <input type="file" name="image" required>
+        <button type="submit">Remove Background</button>
+    </form>
+
+    {% if elapsed_time %}
+    <p><strong>Processed in:</strong> {{ elapsed_time }} seconds</p>
+    {% endif %}
+</body>
+</html>

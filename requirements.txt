@@ -1,0 +1,7 @@
+Flask
+torch
+diffusers
+pillow
+werkzeug
+transparent-background
+numpy

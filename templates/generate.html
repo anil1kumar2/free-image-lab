@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero">
+  <div class="container">
+    <h1>Create <span>Your</span> AI Images</h1>
+    <p>Describe what you want to see — and watch the magic happen.</p>
+
+    <div class="upload-card">
+      {% if error %}
+        <div style="color:red;">{{ error }}</div>
+      {% endif %}
+      <form action="/generate" method="POST">
+        <input type="text" name="prompt" placeholder="e.g. A serene mountain lake at dawn" required
+               style="width:100%; padding:0.75rem; border:1px solid #ccc; border-radius:0.5rem;">
+        <button type="submit" class="mode-btn" style="margin-top:1rem;">Generate Image</button>
+      </form>
+
+      {% if output_image %}
+        <div class="result">
+          <h2>Your AI Creation</h2>
+          <img src="{{ output_image }}" alt="Generated">
+          <a href="{{ output_image }}" download="ai_image.png" class="download-btn">Download</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <h2>Why Use Our AI Generator?</h2>
+    <div class="grid-3">
+      <div class="card"><h3>Fast & Free</h3><p>Generate high-quality images instantly at no cost.</p></div>
+      <div class="card"><h3>Unlimited Prompts</h3><p>From fantasy to photorealism—bring any vision to life.</p></div>
+      <div class="card"><h3>Download Easily</h3><p>Your creations are ready to download in one click.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="container">
+    <h2>How It Works</h2>
+    <div class="grid-3">
+      <div class="card"><h3>1. Write Prompt</h3><p>Type what you imagine, from scenes to characters.</p></div>
+      <div class="card"><h3>2. Generate</h3><p>Our AI crafts your scene in seconds.</p></div>
+      <div class="card"><h3>3. Download</h3><p>Save your image and share it with the world.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="container about-section">
+    <h2>About Our Generator</h2>
+    <p>Powered by Stable Diffusion XL, our generator lets anyone create studio‐grade imagery without expertise or cost.</p>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="container">
+    <h2>Contact Us</h2>
+    <p>Email <a href="mailto:support@freeimagelab.com">support@freeimagelab.com</a> for feedback or help.</p>
+  </div>
+</section>
+
+{% endblock %}

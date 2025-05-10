@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Result</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        img { max-width: 80%; margin-top: 20px; border-radius: 8px; box-shadow: 0 0 10px #aaa; }
+        .download-btn {
+            margin-top: 20px;
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0f62fe;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>✅ Here's your image!</h1>
+    {% if prompt %}
+        <p><strong>Prompt:</strong> {{ prompt }}</p>
+    {% endif %}
+    {% if output_image %}
+        <img id="preview" src="{{ output_image }}" alt="Generated Image">
+        <br>
+        <a class="download-btn" id="download" href="{{ output_image }}" download="image.png">Download Image</a>
+    {% endif %}
+    <p><a href="/">← Generate or Upload Another</a></p>
+</body>
+</html>

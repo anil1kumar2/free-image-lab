@@ -1,0 +1,312 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FreeImageLab</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+   <style>
+    :root {
+      --bg-light: #f0f4ff;
+      --primary: #7c3aed;
+      --primary-light: #a58df4;
+      --text-dark: #222;
+      --muted: #666;
+      --heading: #a78bfa;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    header {
+      background: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    .lab-name { color: var(--text-dark); }
+    .lab-highlight { color: var(--primary); }
+
+    nav a {
+      margin-left: 2rem;
+      font-weight: 500;
+      color: var(--muted);
+      transition: color 0.3s;
+    }
+
+    nav a:hover { color: var(--primary); }
+
+    section {
+      padding: 5rem 0 3rem;
+      text-align: center;
+    }
+
+    section h2 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #7c3aed;
+      margin-bottom: 1rem;
+    }
+
+    section p {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .hero {
+      padding: 5rem 0 3rem;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #7c3aed;
+    }
+
+    .hero span { color: var(--primary); }
+
+    .hero p {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      color: var(--muted);
+    }
+
+    .upload-card {
+      margin: 2rem auto;
+      max-width: 600px;
+      background: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      border: 2px dotted var(--primary-light);
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+
+    .file-upload-label {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: var(--primary-light);
+      color: #fff;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-top: 1rem;
+    }
+
+    .file-upload-label:hover {
+      background: var(--primary);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .upload-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+        display: flex!important;
+      padding: 0.8rem 1.8rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 0.6rem;
+      cursor: pointer;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      color: #fff;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .mode-btn:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      color: var(--text-dark);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      border-radius: 0.4rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      z-index: 10;
+    }
+
+    .result {
+      margin-top: 2rem;
+      text-align: center;
+    }
+
+    .result img {
+      max-width: 100%;
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .grid-3 {
+      display: grid;
+      gap: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+      transition: transform 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .about-section {
+      background: white;
+      padding: 4rem 2rem;
+      border-radius: 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+      box-shadow: 0 5px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .about-section p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .download-btn {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.75rem 2rem;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      text-decoration: none;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    footer {
+      background: #f8f8f8;
+      padding: 2rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container header-content">
+    <a href="/" class="logo">
+      <span class="lab-name">Free</span><span class="lab-highlight">Image</span><span class="lab-name">Lab</span>
+    </a>
+    <nav>
+      <a href="/">Generate Image</a>
+      <a href="/remove">Remove Background</a>
+    </nav>
+  </div>
+</header>
+
+{% block content %}{% endblock %}
+
+<footer>
+  <div class="container">&copy; 2025 FreeImageLab — Built for creators by creators.</div>
+</footer>
+
+<script defer src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+ <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      AOS.init({ duration: 1000, once: true });
+
+      // Spinner element
+      const spinner = document.getElementById('spinner-overlay');
+
+      // Set mode hidden field
+      window.setMode = function(mode) {
+        document.getElementById('modeInput').value = mode;
+      };
+
+      // Show spinner on submit
+      document.getElementById('uploadForm').addEventListener('submit', function() {
+        if (spinner) spinner.style.display = 'flex';
+      });
+
+      // Hide spinner when returning
+      window.addEventListener('pageshow', function() {
+        if (spinner) spinner.style.display = 'none';
+      });
+
+      // File input change handler
+      const imageInput = document.getElementById('imageInput');
+      const modeButtons = document.getElementById('modeButtons');
+      const previewContainer = document.getElementById('previewContainer');
+      const previewImage = document.getElementById('previewImage');
+
+      imageInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            previewImage.src = e.target.result;
+            previewContainer.style.display = 'block';
+            modeButtons.style.display = 'flex';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          previewContainer.style.display = 'none';
+          modeButtons.style.display = 'none';
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

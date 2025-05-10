@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero">
+  <div class="container">
+    <h1>Instant <span>AI</span> Background Removal</h1>
+    <p>Upload your image & get a transparent background—no quality loss, no cost.</p>
+
+    <div class="upload-card">
+      {% if error %}
+        <div style="color:red;">{{ error }}</div>
+      {% endif %}
+      <form id="uploadForm" action="/process" method="post" enctype="multipart/form-data">
+        <label class="file-upload-label">
+          Choose Image
+          <input id="imageInput" type="file" name="image" accept="image/*" required>
+        </label>
+        <input type="hidden" name="mode" id="modeInput" value="base">
+
+        <div class="upload-buttons" id="modeButtons" style="display:none;">
+          <button type="submit" onclick="setMode('base')" class="mode-btn">Remove Background</button>
+        </div>
+
+        <div id="previewContainer" style="display:none; margin-top:1rem;">
+          <img id="previewImage" src="" alt="Preview"
+               style="max-width:100%; border-radius:0.75rem; box-shadow:0 5px 15px rgba(0,0,0,0.1);">
+        </div>
+      </form>
+
+      {% if output_image %}
+        <div class="result">
+          <h2>Your Result</h2>
+          <img src="{{ output_image }}" alt="Result">
+          {% if elapsed_time %}
+            <p style="margin-top:1rem;">Processed in {{ elapsed_time }}s</p>
+          {% endif %}
+          <a href="{{ output_image }}" download="transparent.png" class="download-btn">Download</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <h2>Why Use FreeImageLab?</h2>
+    <div class="grid-3">
+      <div class="card"><h3>Completely Free</h3><p>No login, no watermark, no limits.</p></div>
+      <div class="card"><h3>Original Quality</h3><p>We preserve resolution—no compression.</p></div>
+      <div class="card"><h3>Instant</h3><p>Transparent PNG in seconds—skip the wait.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="container">
+    <h2>How It Works</h2>
+    <div class="grid-3">
+      <div class="card"><h3>1. Upload</h3><p>Select JPG/PNG—no signup needed.</p></div>
+      <div class="card"><h3>2. AI Removes</h3><p>Our model separates subject from background.</p></div>
+      <div class="card"><h3>3. Download</h3><p>Grab your transparent PNG with one click.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="container about-section">
+    <h2>About FreeImageLab</h2>
+    <p>FreeImageLab is your no-cost AI lab for studio-grade background removal—built for creators by creators.</p>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="container">
+    <h2>Contact</h2>
+    <p>Email <a href="mailto:support@freeimagelab.com">support@freeimagelab.com</a> for feedback.</p>
+  </div>
+</section>
+
+{% endblock %}
