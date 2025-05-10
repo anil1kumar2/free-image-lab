@@ -65,7 +65,7 @@ def image_to_base64(img: Image.Image) -> str:
 @app.route('/')
 def index():
     return render_template('generate.html', output_image=None, result_page=False)
-
+WORKER_URL = os.getenv("CF_WORKER_URL", "https://freeimagelab.com/")
 
 @app.route('/generate', methods=['POST'])
 def generate():
