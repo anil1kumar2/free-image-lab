@@ -1,3 +1,7 @@
 name = "free-image-lab"
+compatibility_date = "2024-03-20"
 main = "dist/index.js"
-compatibility_date = "2025-05-11"
+
+[[unsafe.bindings]]
+name = "AI"
+type = "ai"
