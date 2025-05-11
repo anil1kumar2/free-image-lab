@@ -3,4 +3,5 @@ main = "src/index.ts"
 compatibility_date = "2025-05-11"
 
 [site]
-bucket = "./templates"         # Your frontend files
+bucket = "./templates"        # ← points to the folder above
+entry-point = "workers-site"  # if using Wrangler’s default Sites template
