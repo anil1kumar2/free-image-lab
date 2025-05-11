@@ -165,14 +165,18 @@ export default {
           });
         }
       } catch (error) {
-        return new Response(renderPage(`
-          <div class="card">
-            <h2>Error Processing Request</h2>
-            <p>${error.message}</p>
-            <a href="/">Try Again</a>
-          </div>
-        `, 'Error'), { status: 500, headers: { 'Content-Type': 'text/html' } });
-      }
+  let errorMessage = 'An unexpected error occurred.';
+  if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+  return new Response(renderPage(`
+    <div class="card">
+      <h2>Error Processing Request</h2>
+      <p>${errorMessage}</p>
+      <a href="/">Try Again</a>
+    </div>
+  `, 'Error'), { status: 500, headers: { 'Content-Type': 'text/html' } });
+}
     }
 
     return new Response('Method Not Allowed', { status: 405 });
