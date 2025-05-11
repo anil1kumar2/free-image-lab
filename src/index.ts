@@ -1,147 +1,223 @@
-// index.ts
-export interface Env {}
-
-// ========================
-// EMBEDDED LIBRARY ASSETS
-// ========================
-const WASM_MODEL = '...base64-encoded-wasm-file...'; // Actual base64 string goes here
-const LIBRARY_CODE = `
-//...minified @transparent-background/removal code...
-// Modified to use embedded WASM instead of file system
-function loadModel() {
-  return WebAssembly.compile(Uint8Array.from(atob("${WASM_MODEL}"), c => c.charCodeAt(0)));
-}
-`;
-
-// ========================
-// HTML TEMPLATE
-// ========================
-const HTML_TEMPLATE = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Background Remover</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-    .upload-box { border: 2px dashed #ccc; padding: 2rem; text-align: center; margin: 2rem 0; }
-    input[type="file"] { display: none; }
-    .upload-btn { 
-      background: #7c3aed; color: white; padding: 12px 24px; 
-      border-radius: 6px; cursor: pointer; display: inline-block;
-    }
-    #result { margin-top: 2rem; text-align: center; }
-    img { max-width: 100%; height: auto; border-radius: 8px; }
-  </style>
-</head>
-<body>
-  <h1>Background Remover</h1>
-  <div class="upload-box">
-    <label class="upload-btn">
-      Upload Image
-      <input type="file" id="imageInput" accept="image/*">
-    </label>
-    <button class="upload-btn" onclick="processImage()">Remove Background</button>
-  </div>
-  <div id="result"></div>
-
-  <script>
-    async function processImage() {
-      const file = document.getElementById('imageInput').files[0];
-      if (!file) return alert('Please select an image first');
-      
-      const formData = new FormData();
-      formData.append('image', file);
-
-      try {
-        const response = await fetch('/process', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) throw new Error(await response.text());
-        
-        const blob = await response.blob();
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(blob);
-        document.getElementById('result').innerHTML = '';
-        document.getElementById('result').appendChild(img);
-      } catch (error) {
-        alert('Error: ' + error.message);
-      }
-    }
-  </script>
-</body>
-</html>
-`;
-
-// ========================
-// WORKER HANDLERS
-// ========================
-async function removeBackground(imageBuffer: ArrayBuffer): Promise<ArrayBuffer> {
-  // Create virtual environment for the library
-  const module = { exports: {} };
-  const require = (name: string) => {
-    if (name === 'fs') return { readFileSync: () => WASM_MODEL };
-    throw new Error('Require not implemented');
-  };
-
-  // Evaluate library code
-  new Function('exports', 'require', 'module', LIBRARY_CODE)(module.exports, require, module);
-  
-  // Initialize processor
-  const { TransparentBackground } = module.exports as any;
-  const processor = new TransparentBackground({
-    model: 'base',
-    debug: false,
-    loadModel: async () => WebAssembly.compile(Uint8Array.from(atob(WASM_MODEL), c => c.charCodeAt(0)))
-  });
-
-  // Process image
-  const blob = new Blob([new Uint8Array(imageBuffer)]);
-  const result = await processor.removeBackground(blob, {
-    format: 'png',
-    returnType: 'buffer'
-  });
-
-  return result;
-}
-
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: any): Promise<Response> {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    // Serve HTML UI
-    if (request.method === 'GET') {
-      return new Response(HTML_TEMPLATE, {
-        headers: { 'Content-Type': 'text/html' }
-      });
-    }
-
-    // Handle image processing
-    if (request.method === 'POST' && url.pathname === '/process') {
-      try {
-        const formData = await request.formData();
-        const file = formData.get('image') as File;
-        
-        if (!file) return new Response('No image uploaded', { status: 400 });
-        if (file.size > 4 * 1024 * 1024) {
-          return new Response('File size exceeds 4MB limit', { status: 400 });
-        }
-
-        const imageBuffer = await file.arrayBuffer();
-        const processed = await removeBackground(imageBuffer);
-        
-        return new Response(processed, {
-          headers: { 
-            'Content-Type': 'image/png',
-            'Content-Disposition': 'attachment; filename="no-bg.png"'
+    // Shared HTML template
+    const renderPage = (content: string, title: string) => `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${title} - Free Image Lab</title>
+        <style>
+          :root {
+            --primary: #7c3aed;
+            --background: #f0f4ff;
+            --card-bg: #ffffff;
           }
-        });
-      } catch (error) {
-        return new Response(`Processing failed: ${error.message}`, { status: 500 });
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            margin: 0;
+            padding: 2rem;
+          }
+          .container {
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+          }
+          .nav { margin-bottom: 2rem; }
+          .nav a {
+            margin-right: 1.5rem;
+            color: #666;
+            text-decoration: none;
+          }
+          .nav a:hover { color: var(--primary); }
+          form { margin-top: 2rem; }
+          input, button {
+            padding: 0.8rem;
+            border-radius: 0.5rem;
+            border: 1px solid #ddd;
+          }
+          button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+          }
+          .result-img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 2rem;
+            border-radius: 0.5rem;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="nav">
+            <a href="/">Home</a>
+            <a href="/generate">Generate</a>
+            <a href="/remove">Remove BG</a>
+          </div>
+          ${content}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // GET Request Handler
+    if (request.method === 'GET') {
+      switch (path) {
+        case '/':
+          return new Response(renderPage(`
+            <div class="card">
+              <h1>Welcome to Free Image Lab</h1>
+              <p>Choose a tool:</p>
+              <ul>
+                <li><a href="/generate">Generate New Image</a></li>
+                <li><a href="/remove">Remove Background</a></li>
+              </ul>
+            </div>
+          `, 'Home'), { headers: { 'Content-Type': 'text/html' } });
+
+        case '/generate':
+          return new Response(renderPage(`
+            <div class="card">
+              <h1>Generate Image</h1>
+              <form action="/generate" method="POST">
+                <input type="text" name="prompt" placeholder="Enter your prompt..." required style="width: 70%">
+                <button type="submit">Generate</button>
+              </form>
+            </div>
+          `, 'Generate Image'), { headers: { 'Content-Type': 'text/html' } });
+
+        case '/remove':
+          return new Response(renderPage(`
+            <div class="card">
+              <h1>Remove Background</h1>
+              <form action="/remove" method="POST" enctype="multipart/form-data">
+                <input type="file" name="image" accept="image/*" required>
+                <button type="submit" style="margin-top: 1rem">Remove Background</button>
+              </form>
+            </div>
+          `, 'Remove Background'), { headers: { 'Content-Type': 'text/html' } });
+
+        default:
+          return new Response('Not Found', { status: 404 });
       }
     }
 
-    return new Response('Not found', { status: 404 });
-  }
+    // POST Request Handler
+    if (request.method === 'POST') {
+      try {
+        if (path === '/generate') {
+          const formData = await request.formData();
+          const prompt = formData.get('prompt')?.toString().trim();
+          
+          if (!prompt) return new Response('Prompt is required', { status: 400 });
+
+          const image = await env.AI.run('@cf/stabilityai/stable-diffusion-xl-base-1.0', {
+            prompt,
+            negative_prompt: 'blurry, distorted, low quality',
+            num_steps: 30
+          });
+
+          const base64Image = await imageToBase64(image);
+          return new Response(renderResult(base64Image), { 
+            headers: { 'Content-Type': 'text/html' } 
+          });
+
+        } else if (path === '/remove') {
+          const formData = await request.formData();
+          const file = formData.get('image') as File;
+          
+          if (!file) return new Response('Image required', { status: 400 });
+          if (file.size > 5 * 1024 * 1024) {
+            return new Response('File size exceeds 5MB limit', { status: 400 });
+          }
+
+          // Convert to base64
+          const buffer = await file.arrayBuffer();
+          const base64Image = arrayBufferToBase64(buffer);
+
+          // Call background removal API (replace with your own service)
+          const response = await fetch('https://freeimagelab.com/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Image })
+          });
+
+          if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`API Error: ${error}`);
+          }
+
+          const result = await response.json() as { image: string };
+          return new Response(renderResult(result.image), { 
+            headers: { 'Content-Type': 'text/html' } 
+          });
+        }
+      } catch (error) {
+        return new Response(renderPage(`
+          <div class="card">
+            <h2>Error Processing Request</h2>
+            <p>${error.message}</p>
+            <a href="/">Try Again</a>
+          </div>
+        `, 'Error'), { status: 500, headers: { 'Content-Type': 'text/html' } });
+      }
+    }
+
+    return new Response('Method Not Allowed', { status: 405 });
+  },
 };
+
+// Helper functions
+function renderResult(base64Image: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Result - Free Image Lab</title>
+      <style>
+        /* Include the same styles as renderPage function */
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="nav">
+          <a href="/">Home</a>
+          <a href="/generate">Generate</a>
+          <a href="/remove">Remove BG</a>
+        </div>
+        <div class="card">
+          <h1>Your Result</h1>
+          <img src="data:image/png;base64,${base64Image}" class="result-img">
+          <div style="margin-top: 2rem">
+            <a href="/">← Back to Home</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+async function imageToBase64(image: Response): Promise<string> {
+  const buffer = await image.arrayBuffer();
+  return arrayBufferToBase64(buffer);
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
