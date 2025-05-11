@@ -37,7 +37,7 @@ export default {
 
     // Background removal proxy
     if (pathname === '/process' && request.method === 'POST') {
-      const resp = await fetch('https://your-removal-backend.com/process', {
+      const resp = await fetch('https://freeimagelab.com/process', {
         method: 'POST',
         headers: request.headers,
         body: request.body
