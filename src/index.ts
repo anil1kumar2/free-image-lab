@@ -55,7 +55,7 @@ export default {
           return new Response('Background removal failed.', { status: 500 });
         }
 
-        const result = await response.json();
+       const result = await response.json() as { image: string };
         const processedImage = result.image; // Assuming the API returns { image: 'base64string' }
 
         return new Response(resultPage(processedImage), { headers: { 'Content-Type': 'text/html' } });
