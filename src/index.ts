@@ -1,9 +1,12 @@
+interface Env {
+  AI: any;
+}
+
 export default {
-  async fetch(request: Request, env: any): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Shared HTML template
     const renderPage = (content: string, title: string) => `
       <!DOCTYPE html>
       <html>
@@ -32,9 +35,12 @@ export default {
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
           }
-          .nav { margin-bottom: 2rem; }
+          .nav { 
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1.5rem;
+          }
           .nav a {
-            margin-right: 1.5rem;
             color: #666;
             text-decoration: none;
           }
@@ -44,79 +50,81 @@ export default {
             padding: 0.8rem;
             border-radius: 0.5rem;
             border: 1px solid #ddd;
+            font-size: 1rem;
           }
           button {
             background: var(--primary);
             color: white;
             border: none;
             cursor: pointer;
+            transition: opacity 0.2s;
           }
+          button:hover { opacity: 0.9; }
           .result-img {
             max-width: 100%;
             height: auto;
             margin-top: 2rem;
             border-radius: 0.5rem;
           }
+          .error { color: #dc2626; }
         </style>
       </head>
       <body>
         <div class="container">
-          <div class="nav">
+          <nav class="nav">
             <a href="/">Home</a>
             <a href="/generate">Generate</a>
             <a href="/remove">Remove BG</a>
-          </div>
+          </nav>
           ${content}
         </div>
       </body>
       </html>
     `;
 
-    // GET Request Handler
-    if (request.method === 'GET') {
-      switch (path) {
-        case '/':
-          return new Response(renderPage(`
-            <div class="card">
-              <h1>Welcome to Free Image Lab</h1>
-              <p>Choose a tool:</p>
-              <ul>
-                <li><a href="/generate">Generate New Image</a></li>
-                <li><a href="/remove">Remove Background</a></li>
-              </ul>
-            </div>
-          `, 'Home'), { headers: { 'Content-Type': 'text/html' } });
+    try {
+      if (request.method === 'GET') {
+        switch (path) {
+          case '/':
+            return new Response(renderPage(`
+              <div class="card">
+                <h1>Welcome to Free Image Lab</h1>
+                <p>Choose a tool:</p>
+                <ul>
+                  <li><a href="/generate">Generate New Image</a></li>
+                  <li><a href="/remove">Remove Background</a></li>
+                </ul>
+              </div>
+            `, 'Home'), { headers: { 'Content-Type': 'text/html' } });
 
-        case '/generate':
-          return new Response(renderPage(`
-            <div class="card">
-              <h1>Generate Image</h1>
-              <form action="/generate" method="POST">
-                <input type="text" name="prompt" placeholder="Enter your prompt..." required style="width: 70%">
-                <button type="submit">Generate</button>
-              </form>
-            </div>
-          `, 'Generate Image'), { headers: { 'Content-Type': 'text/html' } });
+          case '/generate':
+            return new Response(renderPage(`
+              <div class="card">
+                <h1>Generate Image</h1>
+                <form action="/generate" method="POST">
+                  <input type="text" name="prompt" placeholder="Enter your prompt..." required style="width: 70%">
+                  <button type="submit">Generate</button>
+                </form>
+              </div>
+            `, 'Generate Image'), { headers: { 'Content-Type': 'text/html' } });
 
-        case '/remove':
-          return new Response(renderPage(`
-            <div class="card">
-              <h1>Remove Background</h1>
-              <form action="/remove" method="POST" enctype="multipart/form-data">
-                <input type="file" name="image" accept="image/*" required>
-                <button type="submit" style="margin-top: 1rem">Remove Background</button>
-              </form>
-            </div>
-          `, 'Remove Background'), { headers: { 'Content-Type': 'text/html' } });
+          case '/remove':
+            return new Response(renderPage(`
+              <div class="card">
+                <h1>Remove Background</h1>
+                <form action="/remove" method="POST" enctype="multipart/form-data">
+                  <input type="file" name="image" accept="image/*" required>
+                  <button type="submit" style="margin-top: 1rem">Remove Background</button>
+                </form>
+              </div>
+            `, 'Remove Background'), { headers: { 'Content-Type': 'text/html' } });
 
-        default:
-          return new Response('Not Found', { status: 404 });
+          default:
+            return new Response('Not Found', { status: 404 });
+        }
       }
-    }
 
-    // POST Request Handler
-    if (request.method === 'POST') {
-      try {
+      if (request.method === 'POST') {
         if (path === '/generate') {
           const formData = await request.formData();
           const prompt = formData.get('prompt')?.toString().trim();
@@ -136,18 +144,16 @@ export default {
 
         } else if (path === '/remove') {
           const formData = await request.formData();
-          const file = formData.get('image') as File;
+          const file = formData.get('image') as File | null;
           
           if (!file) return new Response('Image required', { status: 400 });
           if (file.size > 5 * 1024 * 1024) {
             return new Response('File size exceeds 5MB limit', { status: 400 });
           }
 
-          // Convert to base64
           const buffer = await file.arrayBuffer();
           const base64Image = arrayBufferToBase64(buffer);
 
-          // Call background removal API (replace with your own service)
           const response = await fetch('https://freeimagelab.com/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -164,26 +170,25 @@ export default {
             headers: { 'Content-Type': 'text/html' } 
           });
         }
-      } catch (error) {
-  let errorMessage = 'An unexpected error occurred.';
-  if (error instanceof Error) {
-    errorMessage = error.message;
-  }
-  return new Response(renderPage(`
-    <div class="card">
-      <h2>Error Processing Request</h2>
-      <p>${errorMessage}</p>
-      <a href="/">Try Again</a>
-    </div>
-  `, 'Error'), { status: 500, headers: { 'Content-Type': 'text/html' } });
-}
-    }
+      }
 
-    return new Response('Method Not Allowed', { status: 405 });
+      return new Response('Method Not Allowed', { status: 405 });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      return new Response(renderPage(`
+        <div class="card">
+          <h2 class="error">Error Processing Request</h2>
+          <p>${errorMessage}</p>
+          <a href="/">← Back to Home</a>
+        </div>
+      `, 'Error'), { 
+        status: 500, 
+        headers: { 'Content-Type': 'text/html' } 
+      });
+    }
   },
 };
 
-// Helper functions
 function renderResult(base64Image: string): string {
   return `
     <!DOCTYPE html>
@@ -191,16 +196,16 @@ function renderResult(base64Image: string): string {
     <head>
       <title>Result - Free Image Lab</title>
       <style>
-        /* Include the same styles as renderPage function */
+        /* Same styles as renderPage function */
       </style>
     </head>
     <body>
       <div class="container">
-        <div class="nav">
+        <nav class="nav">
           <a href="/">Home</a>
           <a href="/generate">Generate</a>
           <a href="/remove">Remove BG</a>
-        </div>
+        </nav>
         <div class="card">
           <h1>Your Result</h1>
           <img src="data:image/png;base64,${base64Image}" class="result-img">
@@ -220,8 +225,6 @@ async function imageToBase64(image: Response): Promise<string> {
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
   const bytes = new Uint8Array(buffer);
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
+  return btoa(String.fromCharCode(...bytes));
 }
