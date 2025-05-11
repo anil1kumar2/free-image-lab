@@ -1,180 +1,147 @@
-export interface Env {
-  AI: any;
-}
+// index.ts
+export interface Env {}
 
-const HTML_HEADER = `
+// ========================
+// EMBEDDED LIBRARY ASSETS
+// ========================
+const WASM_MODEL = '...base64-encoded-wasm-file...'; // Actual base64 string goes here
+const LIBRARY_CODE = `
+//...minified @transparent-background/removal code...
+// Modified to use embedded WASM instead of file system
+function loadModel() {
+  return WebAssembly.compile(Uint8Array.from(atob("${WASM_MODEL}"), c => c.charCodeAt(0)));
+}
+`;
+
+// ========================
+// HTML TEMPLATE
+// ========================
+const HTML_TEMPLATE = `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>FreeImageLab</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700&display=swap" rel="stylesheet">
+  <title>Background Remover</title>
   <style>
-    :root {
-      --bg-light: #f0f4ff;
-      --primary: #7c3aed;
-      --primary-light: #a58df4;
-      --text-dark: #222;
-      --muted: #666;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Poppins', sans-serif; background: var(--bg-light); color: var(--text-dark); }
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    header { background: white; padding: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 2rem; }
-    .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
-    nav { margin-top: 1rem; }
-    nav a { margin-right: 1.5rem; color: var(--muted); text-decoration: none; }
-    nav a:hover { color: var(--primary); }
-    .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-    .upload-form { margin-top: 2rem; }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .upload-box { border: 2px dashed #ccc; padding: 2rem; text-align: center; margin: 2rem 0; }
     input[type="file"] { display: none; }
-    .file-label { 
-      display: inline-block; padding: 12px 24px; background: var(--primary); 
-      color: white; border-radius: 8px; cursor: pointer; transition: transform 0.2s;
+    .upload-btn { 
+      background: #7c3aed; color: white; padding: 12px 24px; 
+      border-radius: 6px; cursor: pointer; display: inline-block;
     }
-    .file-label:hover { transform: translateY(-2px); }
-    .result-img { max-width: 100%; height: auto; margin-top: 2rem; border-radius: 1rem; }
-    .download-btn { display: inline-block; margin-top: 1rem; padding: 12px 24px; background: var(--primary-light); color: white; border-radius: 8px; text-decoration: none; }
+    #result { margin-top: 2rem; text-align: center; }
+    img { max-width: 100%; height: auto; border-radius: 8px; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="container">
-      <div class="logo">FreeImageLab</div>
-      <nav>
-        <a href="/">Generate</a>
-        <a href="/remove">Remove BG</a>
-      </nav>
-    </div>
-  </header>
-  <div class="container">
-`;
-
-const HTML_FOOTER = `
+  <h1>Background Remover</h1>
+  <div class="upload-box">
+    <label class="upload-btn">
+      Upload Image
+      <input type="file" id="imageInput" accept="image/*">
+    </label>
+    <button class="upload-btn" onclick="processImage()">Remove Background</button>
   </div>
+  <div id="result"></div>
+
+  <script>
+    async function processImage() {
+      const file = document.getElementById('imageInput').files[0];
+      if (!file) return alert('Please select an image first');
+      
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch('/process', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) throw new Error(await response.text());
+        
+        const blob = await response.blob();
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        document.getElementById('result').innerHTML = '';
+        document.getElementById('result').appendChild(img);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+  </script>
 </body>
 </html>
 `;
 
+// ========================
+// WORKER HANDLERS
+// ========================
+async function removeBackground(imageBuffer: ArrayBuffer): Promise<ArrayBuffer> {
+  // Create virtual environment for the library
+  const module = { exports: {} };
+  const require = (name: string) => {
+    if (name === 'fs') return { readFileSync: () => WASM_MODEL };
+    throw new Error('Require not implemented');
+  };
+
+  // Evaluate library code
+  new Function('exports', 'require', 'module', LIBRARY_CODE)(module.exports, require, module);
+  
+  // Initialize processor
+  const { TransparentBackground } = module.exports as any;
+  const processor = new TransparentBackground({
+    model: 'base',
+    debug: false,
+    loadModel: async () => WebAssembly.compile(Uint8Array.from(atob(WASM_MODEL), c => c.charCodeAt(0)))
+  });
+
+  // Process image
+  const blob = new Blob([new Uint8Array(imageBuffer)]);
+  const result = await processor.removeBackground(blob, {
+    format: 'png',
+    returnType: 'buffer'
+  });
+
+  return result;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const path = url.pathname;
 
-    try {
-      if (request.method === 'GET') {
-        switch (path) {
-          case '/':
-            return new Response(HTML_HEADER + generatePage() + HTML_FOOTER, 
-              { headers: { 'Content-Type': 'text/html' } });
-          
-          case '/remove':
-            return new Response(HTML_HEADER + removePage() + HTML_FOOTER, 
-              { headers: { 'Content-Type': 'text/html' } });
-          
-          default:
-            return new Response('Not found', { status: 404 });
-        }
-      }
-
-      if (request.method === 'POST') {
-        switch (path) {
-          case '/generate':
-            return handleGenerate(request, env);
-          
-          case '/remove':
-            return handleRemoveBackground(request, env);
-        }
-      }
-
-      return new Response('Method not allowed', { status: 405 });
-    } catch (error) {
-      return new Response(`Error: ${error.message}`, { status: 500 });
+    // Serve HTML UI
+    if (request.method === 'GET') {
+      return new Response(HTML_TEMPLATE, {
+        headers: { 'Content-Type': 'text/html' }
+      });
     }
+
+    // Handle image processing
+    if (request.method === 'POST' && url.pathname === '/process') {
+      try {
+        const formData = await request.formData();
+        const file = formData.get('image') as File;
+        
+        if (!file) return new Response('No image uploaded', { status: 400 });
+        if (file.size > 4 * 1024 * 1024) {
+          return new Response('File size exceeds 4MB limit', { status: 400 });
+        }
+
+        const imageBuffer = await file.arrayBuffer();
+        const processed = await removeBackground(imageBuffer);
+        
+        return new Response(processed, {
+          headers: { 
+            'Content-Type': 'image/png',
+            'Content-Disposition': 'attachment; filename="no-bg.png"'
+          }
+        });
+      } catch (error) {
+        return new Response(`Processing failed: ${error.message}`, { status: 500 });
+      }
+    }
+
+    return new Response('Not found', { status: 404 });
   }
 };
-
-async function handleGenerate(request: Request, env: Env): Promise<Response> {
-  const formData = await request.formData();
-  const prompt = formData.get('prompt')?.toString().trim();
-
-  if (!prompt) return new Response('Prompt required', { status: 400 });
-
-  const image = await env.AI.run('@cf/stabilityai/stable-diffusion-xl-base-1.0', {
-    prompt,
-    negative_prompt: 'blurry, distorted',
-    num_steps: 30
-  });
-
-  const base64 = await arrayBufferToBase64(await image.arrayBuffer());
-  return renderResult(base64);
-}
-
-async function handleRemoveBackground(request: Request, env: Env): Promise<Response> {
-  const formData = await request.formData();
-  const file = formData.get('image') as File | null;
-  
-  if (!file) return new Response('Image required', { status: 400 });
-  if (file.size > 5 * 1024 * 1024) return new Response('File too large (max 5MB)', { status: 400 });
-
-  const imageBuffer = await file.arrayBuffer();
-  const base64Image = arrayBufferToBase64(imageBuffer);
-
-  // Use Cloudflare's native background removal model
-  const result = await env.AI.run('@cf/trigger/background-removal', {
-    image: base64Image,
-    return_png: true
-  });
-
-  const processedImage = await result.arrayBuffer();
-  return renderResult(arrayBufferToBase64(processedImage));
-}
-
-function generatePage(): string {
-  return `
-    <div class="card">
-      <h1>AI Image Generation</h1>
-      <form class="upload-form" action="/generate" method="POST">
-        <input type="text" name="prompt" placeholder="Describe your image..." required 
-               style="width: 100%; padding: 12px; margin-bottom: 1rem; border: 2px solid #ddd; border-radius: 8px;">
-        <button type="submit" class="file-label">Generate Image</button>
-      </form>
-    </div>
-  `;
-}
-
-function removePage(): string {
-  return `
-    <div class="card">
-      <h1>Background Removal</h1>
-      <form class="upload-form" action="/remove" method="POST" enctype="multipart/form-data">
-        <label class="file-label">
-          Upload Image
-          <input type="file" name="image" accept="image/*" required>
-        </label>
-        <button type="submit" class="file-label" style="margin-top: 1rem">Remove Background</button>
-      </form>
-    </div>
-  `;
-}
-
-function renderResult(base64Image: string): Response {
-  const html = HTML_HEADER + `
-    <div class="card">
-      <h1>Your Result</h1>
-      <img src="data:image/png;base64,${base64Image}" class="result-img" alt="Result">
-      <a href="/" class="download-btn">New Conversion</a>
-    </div>
-  ` + HTML_FOOTER;
-
-  return new Response(html, { headers: { 'Content-Type': 'text/html' } });
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  bytes.forEach(b => binary += String.fromCharCode(b));
-  return btoa(binary);
-}
