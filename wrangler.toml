@@ -2,8 +2,9 @@ name = "freeimagelab-worker"
 main = "src/index.ts"
 compatibility_date = "2025-05-11"
 
-# Known workaround for Worker-to-itself fetch 522 bug on custom domains
-compatibility_flags = ["no_minimal_subrequests"]  # :contentReference[oaicite:0]{index=0}
+# Workaround for Worker-to-itself fetch 522 bug
+compatibility_flags = ["no_minimal_subrequests"]
 
 [site]
-bucket = "./templates"        # Uploads everything in templates/ as static assets 
+bucket = "./templates"          # 1. Upload this directory
+entry-point = "workers-site"    # 2. Enable SPA fallback
