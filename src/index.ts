@@ -1,158 +1,180 @@
+export interface Env {
+  AI: any;
+}
+
+const HTML_HEADER = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FreeImageLab</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-light: #f0f4ff;
+      --primary: #7c3aed;
+      --primary-light: #a58df4;
+      --text-dark: #222;
+      --muted: #666;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Poppins', sans-serif; background: var(--bg-light); color: var(--text-dark); }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    header { background: white; padding: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 2rem; }
+    .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    nav { margin-top: 1rem; }
+    nav a { margin-right: 1.5rem; color: var(--muted); text-decoration: none; }
+    nav a:hover { color: var(--primary); }
+    .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+    .upload-form { margin-top: 2rem; }
+    input[type="file"] { display: none; }
+    .file-label { 
+      display: inline-block; padding: 12px 24px; background: var(--primary); 
+      color: white; border-radius: 8px; cursor: pointer; transition: transform 0.2s;
+    }
+    .file-label:hover { transform: translateY(-2px); }
+    .result-img { max-width: 100%; height: auto; margin-top: 2rem; border-radius: 1rem; }
+    .download-btn { display: inline-block; margin-top: 1rem; padding: 12px 24px; background: var(--primary-light); color: white; border-radius: 8px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">FreeImageLab</div>
+      <nav>
+        <a href="/">Generate</a>
+        <a href="/remove">Remove BG</a>
+      </nav>
+    </div>
+  </header>
+  <div class="container">
+`;
+
+const HTML_FOOTER = `
+  </div>
+</body>
+</html>
+`;
+
 export default {
-  async fetch(request: Request, env: any): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    if (request.method === 'GET') {
-      switch (path) {
-        case '/':
-        case '/index':
-          return new Response(indexPage(), { headers: { 'Content-Type': 'text/html' } });
-        case '/generate':
-          return new Response(generatePage(), { headers: { 'Content-Type': 'text/html' } });
-        case '/remove':
-          return new Response(removePage(), { headers: { 'Content-Type': 'text/html' } });
-        case '/favicon.ico':
-          return new Response(favicon(), { headers: { 'Content-Type': 'image/x-icon' } });
-        default:
-          return new Response('404 Not Found', { status: 404 });
+    try {
+      if (request.method === 'GET') {
+        switch (path) {
+          case '/':
+            return new Response(HTML_HEADER + generatePage() + HTML_FOOTER, 
+              { headers: { 'Content-Type': 'text/html' } });
+          
+          case '/remove':
+            return new Response(HTML_HEADER + removePage() + HTML_FOOTER, 
+              { headers: { 'Content-Type': 'text/html' } });
+          
+          default:
+            return new Response('Not found', { status: 404 });
+        }
       }
-    } else if (request.method === 'POST') {
-      if (path === '/generate') {
-        const formData = await request.formData();
-        const prompt = formData.get('prompt')?.toString().trim();
 
-        if (!prompt) {
-          return new Response('Prompt is required.', { status: 400 });
+      if (request.method === 'POST') {
+        switch (path) {
+          case '/generate':
+            return handleGenerate(request, env);
+          
+          case '/remove':
+            return handleRemoveBackground(request, env);
         }
-
-        const image = await env.AI.run('@cf/stabilityai/stable-diffusion-xl-base-1.0', {
-          prompt,
-          negative_prompt: 'blurry, distorted',
-        });
-
-        const base64Image = await imageToBase64(image);
-
-        return new Response(resultPage(base64Image), { headers: { 'Content-Type': 'text/html' } });
-      } else if (path === '/remove') {
-        const formData = await request.formData();
-        const file = formData.get('image') as File;
-
-        if (!file) {
-          return new Response('Image file is required.', { status: 400 });
-        }
-
-        const buffer = await file.arrayBuffer();
-        const base64 = arrayBufferToBase64(buffer);
-
-        const response = await fetch('https://freeimagelab.com/process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64 }),
-        });
-
-        if (!response.ok) {
-          return new Response('Background removal failed.', { status: 500 });
-        }
-
-       const result = await response.json() as { image: string };
-        const processedImage = result.image; // Assuming the API returns { image: 'base64string' }
-
-        return new Response(resultPage(processedImage), { headers: { 'Content-Type': 'text/html' } });
       }
+
+      return new Response('Method not allowed', { status: 405 });
+    } catch (error) {
+      return new Response(`Error: ${error.message}`, { status: 500 });
     }
-
-    return new Response('Method Not Allowed', { status: 405 });
-  },
+  }
 };
 
-function indexPage(): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Free Image Lab</title>
-    </head>
-    <body>
-      <h1>Welcome to Free Image Lab</h1>
-      <ul>
-        <li><a href="/generate">Generate Image</a></li>
-        <li><a href="/remove">Remove Background</a></li>
-      </ul>
-    </body>
-    </html>
-  `;
+async function handleGenerate(request: Request, env: Env): Promise<Response> {
+  const formData = await request.formData();
+  const prompt = formData.get('prompt')?.toString().trim();
+
+  if (!prompt) return new Response('Prompt required', { status: 400 });
+
+  const image = await env.AI.run('@cf/stabilityai/stable-diffusion-xl-base-1.0', {
+    prompt,
+    negative_prompt: 'blurry, distorted',
+    num_steps: 30
+  });
+
+  const base64 = await arrayBufferToBase64(await image.arrayBuffer());
+  return renderResult(base64);
+}
+
+async function handleRemoveBackground(request: Request, env: Env): Promise<Response> {
+  const formData = await request.formData();
+  const file = formData.get('image') as File | null;
+  
+  if (!file) return new Response('Image required', { status: 400 });
+  if (file.size > 5 * 1024 * 1024) return new Response('File too large (max 5MB)', { status: 400 });
+
+  const imageBuffer = await file.arrayBuffer();
+  const base64Image = arrayBufferToBase64(imageBuffer);
+
+  // Use Cloudflare's native background removal model
+  const result = await env.AI.run('@cf/trigger/background-removal', {
+    image: base64Image,
+    return_png: true
+  });
+
+  const processedImage = await result.arrayBuffer();
+  return renderResult(arrayBufferToBase64(processedImage));
 }
 
 function generatePage(): string {
   return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Generate Image</title>
-    </head>
-    <body>
-      <h1>Generate Image</h1>
-      <form action="/generate" method="POST">
-        <input type="text" name="prompt" placeholder="Enter prompt" required />
-        <button type="submit">Generate</button>
+    <div class="card">
+      <h1>AI Image Generation</h1>
+      <form class="upload-form" action="/generate" method="POST">
+        <input type="text" name="prompt" placeholder="Describe your image..." required 
+               style="width: 100%; padding: 12px; margin-bottom: 1rem; border: 2px solid #ddd; border-radius: 8px;">
+        <button type="submit" class="file-label">Generate Image</button>
       </form>
-    </body>
-    </html>
+    </div>
   `;
 }
 
 function removePage(): string {
   return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Remove Background</title>
-    </head>
-    <body>
-      <h1>Remove Background</h1>
-      <form action="/remove" method="POST" enctype="multipart/form-data">
-        <input type="file" name="image" accept="image/*" required />
-        <button type="submit">Remove Background</button>
+    <div class="card">
+      <h1>Background Removal</h1>
+      <form class="upload-form" action="/remove" method="POST" enctype="multipart/form-data">
+        <label class="file-label">
+          Upload Image
+          <input type="file" name="image" accept="image/*" required>
+        </label>
+        <button type="submit" class="file-label" style="margin-top: 1rem">Remove Background</button>
       </form>
-    </body>
-    </html>
+    </div>
   `;
 }
 
-function resultPage(base64Image: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Result</title>
-    </head>
-    <body>
-      <h1>Result</h1>
-      <img src="data:image/png;base64,${base64Image}" alt="Result Image" />
-      <br />
-      <a href="/">Back to Home</a>
-    </body>
-    </html>
-  `;
-}
+function renderResult(base64Image: string): Response {
+  const html = HTML_HEADER + `
+    <div class="card">
+      <h1>Your Result</h1>
+      <img src="data:image/png;base64,${base64Image}" class="result-img" alt="Result">
+      <a href="/" class="download-btn">New Conversion</a>
+    </div>
+  ` + HTML_FOOTER;
 
-function favicon(): Uint8Array {
-  // Return your favicon binary data here
-  return new Uint8Array();
-}
-
-async function imageToBase64(image: Response): Promise<string> {
-  const buffer = await image.arrayBuffer();
-  return arrayBufferToBase64(buffer);
+  return new Response(html, { headers: { 'Content-Type': 'text/html' } });
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
   const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
   return btoa(binary);
 }
