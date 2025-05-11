@@ -1,6 +1,0 @@
-name = "freeimagelab-worker"
-main = "src/index.ts"
-compatibility_date = "2025-05-11"
-
-[site]
-bucket = "./templates"         # Your frontend files
