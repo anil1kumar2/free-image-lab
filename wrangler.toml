@@ -2,7 +2,8 @@ name = "freeimagelab-worker"
 main = "src/index.ts"
 compatibility_date = "2025-05-11"
 
+# Known workaround for Worker-to-itself fetch 522 bug on custom domains
+compatibility_flags = ["no_minimal_subrequests"]  # :contentReference[oaicite:0]{index=0}
+
 [site]
-bucket = "./templates"        # ← points to the folder above
-entry-point = "workers-site"  # if using Wrangler’s default Sites template
-exclude = ["**/.ipynb_checkpoints/**"]
+bucket = "./templates"        # Uploads everything in templates/ as static assets 
